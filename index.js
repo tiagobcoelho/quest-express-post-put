@@ -2,11 +2,13 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
+const { check, validationResult } = require('express-validator');
 const connection = require('./db');
 
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
+
 
 // respond to requests on `/api/users`
 app.get('/api/users', (req, res) => {
@@ -20,6 +22,25 @@ app.get('/api/users', (req, res) => {
       });
     } else {
       // If everything went well, we send the result of the SQL query as JSON
+      res.json(results);
+    }
+  });
+});
+
+app.post('/api/users', [
+  check('email').isEmail(),
+  check('password').isLength({ min: 8 }),
+], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({ errors: errors.array() });
+  }
+  const userData = req.body;
+
+  connection.query('INSERT INTO user SET ?', userData, (err, results) => {
+    if (err) {
+      res.status(500).send('Error adding new user');
+    } else {
       res.json(results);
     }
   });
